@@ -3,10 +3,16 @@ package com.pavelrekun.rekado.services.usb
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
+import com.afollestad.materialdialogs.MaterialDialog
 import com.pavelrekun.rekado.base.BaseActivity
-import com.pavelrekun.rekado.services.eventbus.Events
 import com.pavelrekun.rekado.services.dialogs.Dialogs
-import com.pavelrekun.rekado.services.logs.Logger
+import com.pavelrekun.rekado.services.eventbus.Events
+import com.pavelrekun.rekado.services.logs.LogHelper
+import com.pavelrekun.rekado.services.logs.LogHelper.INFO
+import com.pavelrekun.rekado.services.payloads.PayloadHelper
+import com.pavelrekun.rekado.services.payloads.PayloadLoader
+import com.pavelrekun.rekado.services.utils.SettingsUtils
+import com.pavelrekun.rekado.services.utils.SwitchUtils
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -14,16 +20,11 @@ import org.greenrobot.eventbus.ThreadMode
 
 class USBReceiver : BaseActivity() {
 
-    companion object {
-        private const val APX_VID = 0x0955
-        private const val APX_PID = 0x7321
-    }
-
-    private var vid: Int = 0
-    private var pid: Int = 0
-
     private lateinit var device: UsbDevice
+
     private var usbHandler: USBHandler? = null
+
+    private lateinit var payloadChooserDialog: MaterialDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,31 +32,37 @@ class USBReceiver : BaseActivity() {
         if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
             device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
 
-            vid = device.vendorId
-            pid = device.productId
+            LogHelper.log(INFO, "USB device connected: ${device.deviceName}")
 
-            Logger.log(1, "USB device connected: ${device.deviceName}")
-
-            Dialogs.showPayloadsDialog(this)
+            if (SettingsUtils.checkAutoInjectorEnabled()) {
+                PayloadHelper.putChosen(PayloadHelper.find(SettingsUtils.getAutoInjectorPayload())!!)
+                injectPayload()
+            } else {
+                payloadChooserDialog = Dialogs.showPayloadsDialog(this)
+            }
         }
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onEvent(event: Events.PayloadSelected) {
-        if (vid == APX_VID && pid == APX_PID) {
-            usbHandler = USBLoader()
+    private fun injectPayload() {
+        if (SwitchUtils.isRCM(device)) {
+            usbHandler = PayloadLoader()
         }
 
         usbHandler?.handleDevice(device)
 
-        Logger.log(1, "Payload loading finished for device: " + device.deviceName)
+        LogHelper.log(INFO, "Payload loading finished for device: ${device.deviceName}")
 
-        finish()
+        finishReceiver()
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: Events.PayloadSelected) {
+        injectPayload()
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
     fun onEvent(event: Events.PayloadNotSelected) {
-        finish()
+        finishReceiver()
     }
 
     override fun onStart() {
@@ -64,7 +71,17 @@ class USBReceiver : BaseActivity() {
     }
 
     override fun onStop() {
-        super.onStop()
         EventBus.getDefault().unregister(this)
+        super.onStop()
+    }
+
+    private fun finishReceiver() {
+        if (this::payloadChooserDialog.isInitialized && payloadChooserDialog.isShowing) {
+            payloadChooserDialog.dismiss()
+        }
+
+        usbHandler?.releaseDevice()
+        usbHandler = null
+        finish()
     }
 }

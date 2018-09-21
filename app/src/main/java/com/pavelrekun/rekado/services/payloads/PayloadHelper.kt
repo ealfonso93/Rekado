@@ -2,9 +2,7 @@ package com.pavelrekun.rekado.services.payloads
 
 import android.os.Environment
 import com.pavelrekun.rekado.data.Payload
-import com.pavelrekun.rekado.services.eventbus.Events
 import io.paperdb.Paper
-import org.greenrobot.eventbus.EventBus
 import java.io.File
 
 
@@ -12,18 +10,21 @@ object PayloadHelper {
 
     val FOLDER_PATH = "${Environment.getExternalStorageDirectory()}/Rekado/"
 
+    const val BUNDLED_PAYLOAD_SX = "sx_loader.bin"
+    const val BUNDLED_PAYLOAD_REINX = "ReiNX.bin"
+
     private const val CHOSEN_PAYLOAD = "CHOSEN_PAYLOAD"
 
     fun init() {
         val folderFile = File(FOLDER_PATH)
-        if (!folderFile.exists()) folderFile.mkdir()
+        if (!folderFile.exists()) folderFile.mkdirs()
     }
 
-    fun getPayloads(): MutableList<Payload> {
+    fun getAll(): MutableList<Payload> {
         val payloads: MutableList<Payload> = ArrayList()
 
         File(FOLDER_PATH).listFiles().forEach {
-            if (it.extension == "bin") {
+            if (it.path.contains("bin")) {
                 payloads.add(Payload(getName(it.path), it.path))
             }
         }
@@ -31,10 +32,18 @@ object PayloadHelper {
         return payloads
     }
 
-    fun getPayloadTitles(): MutableList<String> {
+    fun clearFolder() {
+        File(FOLDER_PATH).listFiles().forEach {
+            if (it.name != BUNDLED_PAYLOAD_SX || it.name != BUNDLED_PAYLOAD_REINX) {
+                it.delete()
+            }
+        }
+    }
+
+    fun getNames(): MutableList<String> {
         val payloads: MutableList<String> = ArrayList()
 
-        for (payload in getPayloads()) {
+        for (payload in getAll()) {
             payloads.add(payload.name)
         }
 
@@ -49,8 +58,8 @@ object PayloadHelper {
         return "$FOLDER_PATH/$name"
     }
 
-    fun findPayload(name: String): Payload? {
-        for (payload in getPayloads()) {
+    fun find(name: String): Payload? {
+        for (payload in getAll()) {
             if (payload.name == name) {
                 return payload
             }
@@ -59,16 +68,11 @@ object PayloadHelper {
         return null
     }
 
-    fun putChosenPayload(payload: Payload) {
+    fun putChosen(payload: Payload) {
         Paper.book().write(CHOSEN_PAYLOAD, payload)
-        EventBus.getDefault().postSticky(Events.PayloadSelected())
     }
 
-    fun getChosenPaylaod(): Payload {
+    fun getChosen(): Payload {
         return Paper.book().read(CHOSEN_PAYLOAD)
-    }
-
-    fun removeChosenPayload() {
-        Paper.book().delete(CHOSEN_PAYLOAD)
     }
 }

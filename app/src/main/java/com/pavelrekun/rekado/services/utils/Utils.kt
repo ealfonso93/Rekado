@@ -3,7 +3,8 @@ package com.pavelrekun.rekado.services.utils
 import android.net.Uri
 import android.support.customtabs.CustomTabsIntent
 import com.pavelrekun.rekado.RekadoApplication
-import kotlin.experimental.and
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 object Utils {
@@ -18,7 +19,7 @@ object Utils {
         customTabsIntent.launchUrl(RekadoApplication.instance.applicationContext, Uri.parse(url))
     }
 
-    fun bytesToHex(bytes: ByteArray) : String{
+    fun bytesToHex(bytes: ByteArray): String {
         val result = StringBuffer()
 
         bytes.forEach {
@@ -31,5 +32,4 @@ object Utils {
 
         return result.toString()
     }
-
 }

@@ -3,15 +3,18 @@ package com.pavelrekun.rekado.services.logs
 import com.pavelrekun.rekado.data.Log
 import io.paperdb.Paper
 
-object Logger {
+object LogHelper {
 
     private const val LOGS_LIST_KEY = "LOGS_LIST_KEY"
+
+    const val INFO = 1
+    const val ERROR = 0
 
     private lateinit var logsList: MutableList<Log>
 
     fun init() {
         logsList = ArrayList()
-        log(1, "Application started!")
+        log(INFO, "Application started!")
         saveLogs()
     }
 
@@ -26,5 +29,11 @@ object Logger {
 
     private fun saveLogs() {
         Paper.book().write(LOGS_LIST_KEY, logsList)
+    }
+
+    fun clearLogs() {
+        logsList.clear()
+
+        init()
     }
 }

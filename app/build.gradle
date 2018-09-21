@@ -9,8 +9,8 @@ android {
         applicationId "com.pavelrekun.rekado"
         minSdkVersion minimumSDKVersion
         targetSdkVersion currentSDKVersion
-        versionCode 3
-        versionName "1.0.3"
+        versionCode 27
+        versionName "2.4"
 
         externalNativeBuild {
             cmake {
@@ -42,6 +42,9 @@ android {
         }
     }
 
+    lintOptions {
+        abortOnError false
+    }
 }
 
 kotlin {
@@ -54,12 +57,17 @@ dependencies {
     implementation "com.android.support:design:$androidSupportVersion"
     implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
     implementation "com.android.support:customtabs:$androidSupportVersion"
+    implementation "com.android.support:preference-v7:$androidSupportVersion"
 
     // Tools
     implementation "io.paperdb:paperdb:$paperVersion"
     implementation "org.greenrobot:eventbus:$eventBusVersion"
-    implementation "commons-io:commons-io:$commonsIOVersion"
     implementation "com.afollestad.material-dialogs:core:$materialDialogsVersion"
+    implementation "com.github.javiersantos:AppUpdater:$appUpdaterVersion"
+
+    // Own
+    implementation project(":konae")
+    implementation (name: 'rang', ext: 'aar')
 
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"

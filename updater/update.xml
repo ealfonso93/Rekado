@@ -1,0 +1,13 @@
+<AppUpdater>
+  <update>
+    <latestVersion>2.3</latestVersion>
+    <latestVersionCode>26</latestVersionCode>
+    <url>https://github.com/MenosGrante/Rekado/releases</url>
+    <releaseNotes>
+- Bundled ReiNX official payload
+- Added French localization
+- Added Italian localization
+- Updated Kotlin and Coroutines to latest versions
+    </releaseNotes>
+  </update>
+</AppUpdater>

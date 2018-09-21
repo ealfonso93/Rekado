@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -13,7 +14,7 @@
         android:elevation="3dp"
         app:navigationIcon="@drawable/ic_navigation_back"
         app:title="@string/navigation_about"
-        app:titleTextColor="?attr/colorAccent" />
+        app:titleTextColor="?android:attr/textColorPrimary" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -31,7 +32,7 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="36dp"
                 android:contentDescription="@null"
-                android:src="@mipmap/ic_launcher" />
+                android:src="@drawable/ic_launcher_hi_resolution" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -41,16 +42,18 @@
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/app_name"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="20sp" />
+                android:textSize="20sp"
+                tools:textColor="?android:attr/textColorPrimaryInverse" />
 
             <TextView
+                android:id="@+id/aboutVersion"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="8dp"
-                android:text="@string/app_version"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                tools:textColor="?android:attr/textColorPrimaryInverse" />
 
             <TextView
                 android:id="@+id/aboutLinkGitHubProject"
@@ -61,6 +64,7 @@
                 android:background="?android:attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true"
+                android:fontFamily="sans-serif-medium"
                 android:text="https://github.com/MenosGrante/Rekado"
                 android:textColor="?attr/colorAccent"
                 android:textSize="16sp" />
@@ -96,7 +100,8 @@
                     android:padding="16dp"
                     android:text="@string/about_information_description"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    tools:textColor="?android:attr/textColorPrimaryInverse" />
 
             </LinearLayout>
 
@@ -118,6 +123,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp   "
                 android:layout_marginEnd="16dp"
                 android:layout_marginStart="16dp"
                 android:background="@color/colorBackgroundSecondary"
@@ -137,7 +143,8 @@
                     android:padding="16dp"
                     android:text="@string/about_developer_github"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    tools:textColor="?android:attr/textColorPrimaryInverse" />
 
                 <View
                     android:layout_width="match_parent"
@@ -157,7 +164,8 @@
                     android:padding="16dp"
                     android:text="@string/about_developer_twitter"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    tools:textColor="?android:attr/textColorPrimaryInverse" />
 
             </LinearLayout>
         </LinearLayout>

@@ -1,6 +1,6 @@
 package com.pavelrekun.rekado.screens.main_activity
 
-import android.content.Intent
+import android.view.MenuItem
 
 interface MainContract {
 
@@ -12,8 +12,11 @@ interface MainContract {
 
         fun initNavigationClickListener()
 
-        fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?)
+        fun onStart()
 
+        fun onStop()
+
+        fun onOptionsItemSelected(item: MenuItem): Boolean
     }
 
 }

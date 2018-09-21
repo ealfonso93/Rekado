@@ -1,29 +1,41 @@
 package com.pavelrekun.rekado.screens.main_activity
 
-import android.app.Activity
 import android.content.Intent
+import android.os.Bundle
 import android.support.v4.app.Fragment
-import android.widget.Toast
+import android.view.MenuItem
+import android.view.ViewGroup
+import com.github.javiersantos.appupdater.AppUpdater
+import com.github.javiersantos.appupdater.enums.Display
+import com.github.javiersantos.appupdater.enums.UpdateFrom
 import com.pavelrekun.rekado.R
 import com.pavelrekun.rekado.base.BaseActivity
-import com.pavelrekun.rekado.data.Payload
+import com.pavelrekun.rekado.screens.about_activity.AboutActivity
 import com.pavelrekun.rekado.screens.instructions_fragment.InstructionsFragment
 import com.pavelrekun.rekado.screens.logs_fragment.LogsFragment
 import com.pavelrekun.rekado.screens.payload_fragment.PayloadsFragment
-import com.pavelrekun.rekado.screens.payload_fragment.PayloadsView
-import com.pavelrekun.rekado.services.eventbus.Events
-import com.pavelrekun.rekado.services.logs.Logger
-import com.pavelrekun.rekado.services.payloads.PayloadHelper
-import com.pavelrekun.rekado.services.utils.FilesHelper
+import com.pavelrekun.rekado.screens.settings_activity.SettingsActivity
+import com.pavelrekun.rekado.services.Constants
+import com.pavelrekun.rekado.services.dialogs.DonateDialog
+import com.pavelrekun.rekado.services.utils.DesignUtils
 import kotlinx.android.synthetic.main.activity_main.*
-import org.greenrobot.eventbus.EventBus
-import java.io.IOException
 
 
-class MainView(private val activity: BaseActivity) : MainContract.View {
+class MainView(private val activity: BaseActivity, private val savedInstanceState: Bundle?) : MainContract.View {
+
+    private var appUpdater: AppUpdater
 
     init {
         initViews()
+
+        appUpdater = initUpdater()
+    }
+
+    private fun initUpdater(): AppUpdater {
+        return AppUpdater(activity)
+                .setDisplay(Display.DIALOG)
+                .setUpdateFrom(UpdateFrom.XML)
+                .setUpdateJSON(Constants.UPDATE_CONFIG_LINK)
     }
 
     override fun initViews() {
@@ -36,12 +48,37 @@ class MainView(private val activity: BaseActivity) : MainContract.View {
     }
 
     override fun initNavigationClickListener() {
-        chooseNavigationItem(R.id.navigation_instructions)
-        activity.mainNavigationBar.selectedItemId = R.id.navigation_instructions
+        if (savedInstanceState == null) {
+            chooseNavigationItem(R.id.navigation_instructions)
+            activity.mainNavigationBar.selectedItemId = R.id.navigation_instructions
+        }
 
         activity.mainNavigationBar.setOnNavigationItemSelectedListener {
             chooseNavigationItem(it.itemId)
             true
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.navigation_about -> {
+                activity.startActivity(Intent(activity, AboutActivity::class.java))
+                true
+            }
+
+            R.id.navigation_settings -> {
+                activity.startActivity(Intent(activity, SettingsActivity::class.java))
+                true
+            }
+
+            R.id.navigation_donate -> {
+                val donateDialog = DonateDialog(activity)
+                donateDialog.window.setLayout(DesignUtils.convertDPtoPX(360), ViewGroup.LayoutParams.WRAP_CONTENT)
+                donateDialog.show()
+                true
+            }
+
+            else -> return false
         }
     }
 
@@ -57,29 +94,15 @@ class MainView(private val activity: BaseActivity) : MainContract.View {
         if (fragment != null) {
             val transaction = activity.supportFragmentManager.beginTransaction()
             transaction.replace(R.id.main_content_frame, fragment)
-            transaction.commitNow()
+            transaction.commit()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
-        if (requestCode == PayloadsView.READ_REQUEST_CODE && resultCode == Activity.RESULT_OK && resultData != null) {
+    override fun onStart() {
+        appUpdater.start()
+    }
 
-            val payload = Payload(PayloadHelper.getName(resultData.data.path), PayloadHelper.getPath(PayloadHelper.getName(resultData.data.path)))
-
-            if (!payload.name.contains("bin")) {
-                Toast.makeText(activity, activity.getString(R.string.helper_error_file_wrong), Toast.LENGTH_SHORT).show()
-            }
-
-            try {
-                val inputStream = activity.contentResolver.openInputStream(resultData.data)
-                FilesHelper.toFile(inputStream, PayloadHelper.FOLDER_PATH + "/" + payload.name)
-
-                EventBus.getDefault().postSticky(Events.UpdateListEvent())
-                Logger.log(1, "Added new payload: ${payload.name}")
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Logger.log(0, "Failed to add payload: ${payload.name}")
-            }
-        }
+    override fun onStop() {
+        appUpdater.stop()
     }
 }

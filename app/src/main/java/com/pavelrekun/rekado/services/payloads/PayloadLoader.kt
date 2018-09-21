@@ -1,55 +1,62 @@
-package com.pavelrekun.rekado.services.usb
+package com.pavelrekun.rekado.services.payloads
 
 import android.content.Context
+import android.content.ServiceConnection
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
-import android.widget.Toast
 import com.pavelrekun.rekado.RekadoApplication
-import com.pavelrekun.rekado.services.logs.Logger
-import com.pavelrekun.rekado.services.payloads.PayloadHelper
+import com.pavelrekun.rekado.services.logs.LogHelper
+import com.pavelrekun.rekado.services.logs.LogHelper.ERROR
+import com.pavelrekun.rekado.services.logs.LogHelper.INFO
+import com.pavelrekun.rekado.services.usb.USBHandler
 import com.pavelrekun.rekado.services.utils.Utils
 import java.io.FileInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class USBLoader : USBHandler {
+class PayloadLoader : USBHandler {
 
     companion object {
+        init {
+            System.loadLibrary("payload_launcher")
+        }
+
         private const val RCM_PAYLOAD_ADDR = 0x40010000
         private const val INTERMEZZO_LOCATION = 0x4001F000
         private const val PAYLOAD_LOAD_BLOCK = 0x40020000
         private const val MAX_LENGTH = 0x30298
-
-        init {
-            System.loadLibrary("native-lib")
-        }
     }
 
+    private lateinit var usbConnection: UsbDeviceConnection
+    private lateinit var usbInterface: UsbInterface
+
     override fun handleDevice(device: UsbDevice) {
-        Logger.log(1, "Starting selected payload!")
+        LogHelper.log(INFO, "Triggering selected payload!")
 
         val context = RekadoApplication.instance.applicationContext
 
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        val usbInterface = device.getInterface(0)
+        usbInterface = device.getInterface(0)
 
         val startEndpoint = usbInterface.getEndpoint(0)
         val endEndpoint = usbInterface.getEndpoint(1)
 
-        val usbConnection = usbManager.openDevice(device)
+        usbConnection = usbManager.openDevice(device)
         usbConnection.claimInterface(usbInterface, true)
 
         /* [1] - Read device ID */
 
         val deviceID = ByteArray(16)
         if (usbConnection.bulkTransfer(startEndpoint, deviceID, deviceID.size, 999) != deviceID.size) {
-            Logger.log(0, "Failed to get Device ID!")
+            LogHelper.log(ERROR, "Failed to get Device ID!")
             return
         }
 
 
-        Logger.log(1, "Device ID: ${Utils.bytesToHex(deviceID)}")
+        LogHelper.log(INFO, "Device ID: ${Utils.bytesToHex(deviceID)}")
 
         /* [2] - Building payload */
 
@@ -73,17 +80,18 @@ class USBLoader : USBHandler {
             intermezzoStream.read(intermezzo)
             intermezzoStream.close()
         } catch (e: IOException) {
-            Logger.log(0, "Failed to read intermezzo: $e")
+            LogHelper.log(0, "Failed to read intermezzo: $e")
             return
         }
 
         payload.put(intermezzo)
+
         payload.put(ByteArray(PAYLOAD_LOAD_BLOCK - INTERMEZZO_LOCATION - intermezzo.size))
 
         try {
             payload.put(getPayload())
         } catch (e: IOException) {
-            Logger.log(0, "Failed to read payload: $e")
+            LogHelper.log(ERROR, "Failed to read payload: $e")
             return
         }
 
@@ -96,37 +104,39 @@ class USBLoader : USBHandler {
 
         while (bytesSent < unPaddedLength || lowBuffer) {
             payload.get(chunk)
+
             if (usbConnection.bulkTransfer(endEndpoint, chunk, chunk.size, 999) != chunk.size) {
-                Logger.log(0, "Sending payload failed at offset $bytesSent")
+                LogHelper.log(ERROR, "Sending payload failed at offset $bytesSent")
                 return
             }
             lowBuffer = lowBuffer xor true
             bytesSent += 0x1000
         }
 
-        Logger.log(1, "Sent $bytesSent bytes")
+        LogHelper.log(INFO, "Sent $bytesSent bytes")
 
         // 0x7000 = STACK_END = high DMA buffer address
         when (nativeTriggerExploit(usbConnection.fileDescriptor, 0x7000)) {
-            0 -> Logger.log(1, "Exploit triggered!")
-            -1 -> Logger.log(0, "SUBMITURB failed!")
-            -2 -> Logger.log(0, "DISCARDURB failed!")
-            -3 -> Logger.log(0, "REAPURB failed!")
-            -4 -> Logger.log(0, "Wrong URB reaped!  Maybe that doesn't matter?")
+            0 -> LogHelper.log(INFO, "Exploit triggered!")
+            -1 -> LogHelper.log(ERROR, "SUBMITURB failed!")
+            -2 -> LogHelper.log(ERROR, "DISCARDURB failed!")
+            -3 -> LogHelper.log(ERROR, "REAPURB failed!")
+            -4 -> LogHelper.log(ERROR, "Wrong URB reaped!  Maybe that doesn't matter?")
         }
+    }
 
+    override fun releaseDevice() {
         usbConnection.releaseInterface(usbInterface)
-        usbConnection.close()
     }
 
     private fun getPayload(): ByteArray {
-        val chosenPayload = PayloadHelper.getChosenPaylaod()
+        val chosenPayload = PayloadHelper.getChosen()
         val chosenPayloadFile = FileInputStream(chosenPayload.path)
 
-        Logger.log(1, "Opening chosen payload: ${chosenPayload.name}")
+        LogHelper.log(INFO, "Opening chosen payload: ${chosenPayload.name}")
 
         val chosenPayloadData = ByteArray(chosenPayloadFile.available())
-        Logger.log(1, "Read ${Integer.toString(chosenPayloadFile.read(chosenPayloadData))} bytes from payload file!")
+        LogHelper.log(INFO, "Read ${Integer.toString(chosenPayloadFile.read(chosenPayloadData))} bytes from payload file!")
 
         chosenPayloadFile.close()
         return chosenPayloadData
@@ -134,7 +144,7 @@ class USBLoader : USBHandler {
 
 
     /**
-     * A native method that is implemented by the 'native-lib' native library,
+     * A native method that is implemented by the 'payload_launcher' native library,
      * which is packaged with this application.
      */
     private external fun nativeTriggerExploit(fd: Int, length: Int): Int
